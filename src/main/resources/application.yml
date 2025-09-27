@@ -1,6 +1,18 @@
 spring:
   application:
     name: y-ai-code-zgen
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/yai
+    username: root
+    password: 123456
+  data:
+    redis:
+      database: 1
+      host: 127.0.0.1
+      port: 6379
+      timeout: 5000
+      password: 123456
 server:
   port: 8180
   servlet:
