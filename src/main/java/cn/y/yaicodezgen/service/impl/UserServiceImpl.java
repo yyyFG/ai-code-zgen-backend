@@ -1,19 +1,24 @@
 package cn.y.yaicodezgen.service.impl;
 
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import cn.y.yaicodezgen.common.ResultUtils;
 import cn.y.yaicodezgen.exception.BusinessException;
 import cn.y.yaicodezgen.exception.ErrorCode;
 import cn.y.yaicodezgen.model.enums.UserRoleEnum;
+import cn.y.yaicodezgen.model.vo.LoginUserVO;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import cn.y.yaicodezgen.model.entity.User;
 import cn.y.yaicodezgen.mapper.UserMapper;
 import cn.y.yaicodezgen.service.UserService;
 import io.netty.util.internal.StringUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import static cn.y.yaicodezgen.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户 服务层实现。
@@ -24,8 +29,39 @@ import org.springframework.util.DigestUtils;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements UserService{
 
     @Override
-    public long userLogin(String userAccount, String password) {
-        return 0;
+    public LoginUserVO userLogin(String userAccount, String password, HttpServletRequest request) {
+        // 校验
+        if (StrUtil.hasBlank(userAccount, password)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (userAccount.length() < 5){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
+        }
+        if (password.length() < 8){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
+        }
+        // 判断用户是否存在
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.eq("userAccount", userAccount);
+        long count = this.count(queryWrapper);
+        if (count < 1){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在");
+        }
+        // 验证密码
+        User user = this.getOne(queryWrapper);
+        String encryptPassword = getEncryptPassword(password);
+        if (!user.getUserPassword().equals(encryptPassword)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
+        }
+
+        LoginUserVO loginUserVO = new LoginUserVO();
+        loginUserVO.setId(user.getId());
+        loginUserVO.setUserAccount(user.getUserAccount());
+        loginUserVO.setUserName(user.getUserName());
+        loginUserVO.setUserRole(user.getUserRole());
+        loginUserVO.setUserAvatar(user.getUserAvatar());
+
+        return loginUserVO;
     }
 
     @Override
@@ -78,5 +114,45 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         //
         final String SALT = "yyy";
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+    }
+
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        User user = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (user == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return user;
+    }
+
+
+    /**
+     * 获取当前登录用户
+     * @param request
+     * @return
+     */
+    @Override
+    public User getLoginUserVO(HttpServletRequest request) {
+        // 判断是否已登录
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        // 从缓存或者数据库查询
+        long userId = currentUser.getId();
+        currentUser = this.getById(userId);
+        if (currentUser == null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        LoginUserVO loginUserVO = new LoginUserVO();
+        loginUserVO.setId(currentUser.getId());
+        loginUserVO.setUserAccount(currentUser.getUserAccount());
+        loginUserVO.setUserName(currentUser.getUserName());
+        loginUserVO.setUserRole(currentUser.getUserRole());
+
+        return currentUser;
     }
 }

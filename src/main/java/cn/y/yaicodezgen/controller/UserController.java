@@ -4,9 +4,13 @@ import cn.y.yaicodezgen.common.BaseResponse;
 import cn.y.yaicodezgen.common.ResultUtils;
 import cn.y.yaicodezgen.exception.ErrorCode;
 import cn.y.yaicodezgen.exception.ThrowUtils;
+import cn.y.yaicodezgen.model.dto.userRequest.UserLoginRequest;
 import cn.y.yaicodezgen.model.dto.userRequest.UserRegisterRequest;
+import cn.y.yaicodezgen.model.vo.LoginUserVO;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpRequest;
 import org.springframework.web.bind.annotation.*;
 import cn.y.yaicodezgen.model.entity.User;
 import cn.y.yaicodezgen.service.UserService;
@@ -43,6 +47,36 @@ public class UserController {
         long userId = userService.userRegister(userAccount, userPassword, checkPassword);
 
         return ResultUtils.success(userId);
+    }
+
+
+    /**
+     * 用户登录
+     *
+     * @param userLoginRequest 用户登录请求
+     * @param request          请求
+     * @return 登录用户信息
+     */
+    @PostMapping("/login")
+    public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
+        ThrowUtils.throwIf(userLoginRequest == null, ErrorCode.PARAMS_ERROR);
+
+        String userAccount = userLoginRequest.getUserAccount();
+        String userPassword = userLoginRequest.getUserPassword();
+        LoginUserVO loginUserVO = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(loginUserVO);
+    }
+
+    /**
+     * 获取当前登录用户
+     *
+     * @param request 请求
+     * @return 当前登录用户
+     */
+    @GetMapping("/get/LoginUser")
+    public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+//        return loginUser;
     }
 
     /**

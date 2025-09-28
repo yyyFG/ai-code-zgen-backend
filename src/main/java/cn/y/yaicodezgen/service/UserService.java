@@ -1,7 +1,9 @@
 package cn.y.yaicodezgen.service;
 
+import cn.y.yaicodezgen.model.vo.LoginUserVO;
 import com.mybatisflex.core.service.IService;
 import cn.y.yaicodezgen.model.entity.User;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 用户 服务层。
@@ -17,7 +19,7 @@ public interface UserService extends IService<User> {
      * @param password  密码
      * @return 脱敏后的用户信息
      */
-    long userLogin(String userAccount, String password);
+    LoginUserVO userLogin(String userAccount, String password, HttpServletRequest request);
 
     /**
      * 用户注册
@@ -35,4 +37,19 @@ public interface UserService extends IService<User> {
      * @return
      */
     String getEncryptPassword(String userPassword);
+
+
+    /**
+     * 获取当前登录用户
+     *
+     * @return
+     */
+    User getLoginUser(HttpServletRequest request);
+
+    /**
+     * 获取当前登录用户 (脱敏)
+     *
+     * @return
+     */
+    User getLoginUserVO(HttpServletRequest request);
 }
