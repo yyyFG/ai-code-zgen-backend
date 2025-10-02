@@ -73,11 +73,25 @@ public class UserController {
      * @param request 请求
      * @return 当前登录用户
      */
-    @GetMapping("/get/LoginUser")
-    public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
+    @GetMapping("/get/login")
+    public BaseResponse<User> getLoginUser(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
-//        return loginUser;
+        return ResultUtils.success(loginUser);
     }
+
+    /**
+     * 用户注销
+     *
+     * @param request 请求
+     * @return 退出登录结果
+     */
+    @PostMapping("/logout")
+    public BaseResponse<Boolean> userLogout(HttpServletRequest request){
+        ThrowUtils.throwIf(request == null, ErrorCode.NOT_LOGIN_ERROR);
+        boolean result = userService.userLogout(request);
+        return ResultUtils.success(result);
+    }
+
 
     /**
      * 保存用户。

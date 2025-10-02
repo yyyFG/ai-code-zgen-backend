@@ -1,5 +1,6 @@
 package cn.y.yaicodezgen.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
@@ -29,15 +30,15 @@ import static cn.y.yaicodezgen.constant.UserConstant.USER_LOGIN_STATE;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements UserService{
 
     @Override
-    public LoginUserVO userLogin(String userAccount, String password, HttpServletRequest request) {
+    public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 校验
-        if (StrUtil.hasBlank(userAccount, password)){
+        if (StrUtil.hasBlank(userAccount, userPassword)){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if (userAccount.length() < 5){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
         }
-        if (password.length() < 8){
+        if (userPassword.length() < 8){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
         }
         // 判断用户是否存在
@@ -49,19 +50,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         }
         // 验证密码
         User user = this.getOne(queryWrapper);
-        String encryptPassword = getEncryptPassword(password);
+        String encryptPassword = getEncryptPassword(userPassword);
         if (!user.getUserPassword().equals(encryptPassword)){
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
         }
 
-        LoginUserVO loginUserVO = new LoginUserVO();
-        loginUserVO.setId(user.getId());
-        loginUserVO.setUserAccount(user.getUserAccount());
-        loginUserVO.setUserName(user.getUserName());
-        loginUserVO.setUserRole(user.getUserRole());
-        loginUserVO.setUserAvatar(user.getUserAvatar());
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
 
-        return loginUserVO;
+        return getLoginUserVO(user);
     }
 
     @Override
@@ -116,23 +112,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
 
-    @Override
-    public User getLoginUser(HttpServletRequest request) {
-        User user = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (user == null){
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
-        }
-        return user;
-    }
-
-
     /**
      * 获取当前登录用户
      * @param request
      * @return
      */
     @Override
-    public User getLoginUserVO(HttpServletRequest request) {
+    public User getLoginUser(HttpServletRequest request) {
         // 判断是否已登录
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
@@ -147,12 +133,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
 
-        LoginUserVO loginUserVO = new LoginUserVO();
-        loginUserVO.setId(currentUser.getId());
-        loginUserVO.setUserAccount(currentUser.getUserAccount());
-        loginUserVO.setUserName(currentUser.getUserName());
-        loginUserVO.setUserRole(currentUser.getUserRole());
-
         return currentUser;
     }
+
+    @Override
+    public LoginUserVO getLoginUserVO(User user) {
+        if (user == null){
+            return null;
+        }
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtil.copyProperties(user, loginUserVO);
+        return loginUserVO;
+    }
+
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+        // 判断是否已登录
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
+        }
+
+        // 移除登录态
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        return true;
+    }
+
 }

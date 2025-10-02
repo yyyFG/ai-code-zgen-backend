@@ -16,10 +16,10 @@ public interface UserService extends IService<User> {
      * 用户登录
      *
      * @param userAccount  用户名
-     * @param password  密码
+     * @param userPassword  密码
      * @return 脱敏后的用户信息
      */
-    LoginUserVO userLogin(String userAccount, String password, HttpServletRequest request);
+    LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
     /**
      * 用户注册
@@ -51,5 +51,13 @@ public interface UserService extends IService<User> {
      *
      * @return
      */
-    User getLoginUserVO(HttpServletRequest request);
+    LoginUserVO getLoginUserVO(User user);
+
+    /**
+     * 退出登录
+     *
+     * @param request
+     * @return
+     */
+    boolean userLogout(HttpServletRequest request);
 }
